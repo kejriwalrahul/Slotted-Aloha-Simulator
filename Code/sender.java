@@ -17,16 +17,21 @@ class Node{
 	int buffer_count;
 	int cw;
 	int backoff_ctr;
-	int pkt_delay;
+	int pkt_delay_1;
+	int pkt_delay_2;
 	int retry_attempts;
 	boolean backlogged;
 
-	Node(int def_cw){
+	int max_retry_attempts;
+
+	Node(int def_cw, int mra){
 		cw = def_cw;
 		backoff_ctr = 0;
-		pkt_delay = 0;
+		pkt_delay_1 = 0;
+		pkt_delay_2 = 0;
 		retry_attempts = 0;
 		backlogged = false;
+		max_retry_attempts = mra;
 	}
 
 	void gen_pkt(){
@@ -45,7 +50,9 @@ class Node{
 		if(!backlogged)
 			return 0;
 
-		pkt_delay ++;
+		pkt_delay_1 ++;
+		if(buffer_count == 2)
+			pkt_delay_2 ++;
 
 		if(backoff_ctr == 0)
 			return 1;
@@ -56,7 +63,7 @@ class Node{
 	}
 
 	int update_success(){
-		int delay = pkt_delay; 
+		int delay = pkt_delay_1; 
 		cw = (int) Math.max(2, cw * 0.75);
 
 		buffer_count --;
@@ -65,7 +72,14 @@ class Node{
 		else
 			backlogged = true;
 		
-		pkt_delay = 0;
+		if(buffer_count == 1){
+			pkt_delay_1 = pkt_delay_2;
+			pkt_delay_2 = 0;
+		}
+		else{
+			pkt_delay_1 = 0;
+			pkt_delay_2 = 0;
+		}
 		retry_attempts = 0;
 		backoff_ctr = 0;
 		
@@ -76,7 +90,7 @@ class Node{
 		backoff_ctr = new Random().nextInt(cw);
 		cw = Math.min(256, cw*2);
 		
-		if(retry_attempts == 100){
+		if(retry_attempts == max_retry_attempts){
 			System.out.println("Exceeded 10 retries for node!");
 			return true;
 		}
@@ -100,7 +114,7 @@ class SlottedAlohaSender{
 	// Xmitter Nodes
 	Node[] nodes;
 
-	SlottedAlohaSender(int n, int dcw, double pgr, int mp){
+	SlottedAlohaSender(int n, int dcw, double pgr, int mp, int mra){
 		num_users = n;
 		def_cw	  = dcw;
 		pkt_gen_rate = pgr;
@@ -108,7 +122,7 @@ class SlottedAlohaSender{
 
 		nodes = new Node[num_users];
 		for(int i=0; i < num_users; i++)
-			nodes[i] = new Node(def_cw);
+			nodes[i] = new Node(def_cw, mra);
 
 		run_simulation();
 	}
@@ -188,6 +202,8 @@ public class sender{
 		double pkt_gen_rate = 0.5;
 		int max_pkts	 = 400;
 
+		int max_retry_attempts = 10;
+
 		// DEBUG modes
 		boolean debug 	 = false;
 		boolean deep_debug 	 = false;
@@ -208,6 +224,8 @@ public class sender{
 					next_arg = 5;
 				else if(arg.equals("-M"))
 					next_arg = 6;
+				else if(arg.equals("-r"))
+					next_arg = 7;
 				else
 					errorExit("Incorrect Usage!");
 			}
@@ -225,12 +243,15 @@ public class sender{
 					case 6: max_pkts = Integer.parseInt(arg);
 							break;
 
+					case 7: max_retry_attempts = Integer.parseInt(arg);
+							break;
+
 					default: errorExit("Incorrect Usage!");
 				}
 				next_arg = 0;
 			}
 		}
 
-		SlottedAlohaSender s = new SlottedAlohaSender(num_users, def_cw, pkt_gen_rate, max_pkts);
+		SlottedAlohaSender s = new SlottedAlohaSender(num_users, def_cw, pkt_gen_rate, max_pkts, max_retry_attempts);
 	}
 }
