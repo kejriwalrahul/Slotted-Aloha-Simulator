@@ -14,26 +14,38 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 	Class for modelling a single node in a Slotted Aloha MAC based framework
 */
 class Node{
-	int buffer_count;
+
+	// Node Parameters
 	int cw;
+	boolean mach_friendly;
+	int max_retry_attempts;
+	
+	// Internal State Vars
+	int buffer_count;
 	int backoff_ctr;
 	int pkt_delay_1;
 	int pkt_delay_2;
 	int retry_attempts;
 	boolean backlogged;
 
-	int max_retry_attempts;
-
-	Node(int def_cw, int mra){
+	// Construct new node
+	Node(int def_cw, int mra, boolean mf){
+		
+		// Initialize node params
 		cw = def_cw;
+		mach_friendly = mf;
+		max_retry_attempts = mra;
+
+		// Initialize internal state vars
+		buffer_count = 0;
 		backoff_ctr = 0;
 		pkt_delay_1 = 0;
 		pkt_delay_2 = 0;
 		retry_attempts = 0;
 		backlogged = false;
-		max_retry_attempts = mra;
 	}
 
+	// Generate new pkt
 	void gen_pkt(){
 		if(buffer_count == 2)
 			return;
@@ -62,6 +74,7 @@ class Node{
 		}
 	}
 
+	// Update state with Succesful Xmission
 	int update_success(){
 		int delay = pkt_delay_1; 
 		cw = (int) Math.max(2, cw * 0.75);
@@ -86,12 +99,14 @@ class Node{
 		return delay;
 	}
 
+	// Update state with Failed Xmission
 	boolean update_fail(){
 		backoff_ctr = new Random().nextInt(cw);
 		cw = Math.min(256, cw*2);
 		
 		if(retry_attempts == max_retry_attempts){
-			System.out.println("Exceeded 10 retries for node!");
+			if(!mach_friendly)
+				System.out.println("Exceeded 10 retries for node!");
 			return true;
 		}
 
@@ -114,15 +129,20 @@ class SlottedAlohaSender{
 	// Xmitter Nodes
 	Node[] nodes;
 
-	SlottedAlohaSender(int n, int dcw, double pgr, int mp, int mra){
+	// Print machine friendly?
+	boolean mach_friendly;
+
+	SlottedAlohaSender(int n, int dcw, double pgr, int mp, int mra, boolean mf){
 		num_users = n;
 		def_cw	  = dcw;
 		pkt_gen_rate = pgr;
 		max_pkts     = mp;
 
+		mach_friendly = mf;
+
 		nodes = new Node[num_users];
 		for(int i=0; i < num_users; i++)
-			nodes[i] = new Node(def_cw, mra);
+			nodes[i] = new Node(def_cw, mra, mach_friendly);
 
 		run_simulation();
 	}
@@ -165,23 +185,47 @@ class SlottedAlohaSender{
 			else{
 				for(Node node: attemptors)
 					if(node.update_fail()){
-						System.out.println("\nQuitting after " + Integer.toString(num_pkts_xmitted) + " pkts\n");
-						System.out.println("N: " + Integer.toString(num_users) 
-							+ " \tW: " + Integer.toString(def_cw)
-							+ "\tP: " + Double.toString(pkt_gen_rate));
-						System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
-							+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
-						System.exit(1);
+						// Print human-readable
+						if(!mach_friendly){
+							System.out.println("\nQuitting after " + Integer.toString(num_pkts_xmitted) + " pkts\n");
+							System.out.println("N: " + Integer.toString(num_users) 
+								+ " \tW: " + Integer.toString(def_cw)
+								+ "\tP: " + Double.toString(pkt_gen_rate));
+							System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
+								+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
+						}
+						// Print machine-friendly
+						else{
+							System.out.println(num_pkts_xmitted);
+							System.out.println(num_users);
+							System.out.println(def_cw);
+							System.out.println(pkt_gen_rate);
+							System.out.println((num_pkts_xmitted*1.0)/SimTime);
+							System.out.println((total_delay_time*1.0)/num_pkts_xmitted);
+						}
+						System.exit(0);							
 					}
 			}
 		}
 
-		System.out.println("N: " + Integer.toString(num_users) 
-			+ " \tW: " + Integer.toString(def_cw)
-			+ "\tP: " + Double.toString(pkt_gen_rate));
-		System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
-			+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
-		System.exit(1);
+		// Print human-readable
+		if(!mach_friendly){
+			System.out.println("N: " + Integer.toString(num_users) 
+				+ " \tW: " + Integer.toString(def_cw)
+				+ "\tP: " + Double.toString(pkt_gen_rate));
+			System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
+				+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
+		}
+		// Print machine-friendly
+		else{
+			System.out.println(-1);
+			System.out.println(num_users);
+			System.out.println(def_cw);
+			System.out.println(pkt_gen_rate);
+			System.out.println((num_pkts_xmitted*1.0)/SimTime);
+			System.out.println((total_delay_time*1.0)/num_pkts_xmitted);
+		}
+		System.exit(0);
 	}
 }
 
@@ -205,8 +249,9 @@ public class sender{
 		int max_retry_attempts = 10;
 
 		// DEBUG modes
-		boolean debug 	 = false;
-		boolean deep_debug 	 = false;
+		boolean debug 	 	  = false;
+		boolean deep_debug 	  = false;
+		boolean mach_friendly = false;
 
 		// Process Command Line Args
 		int next_arg = 0;
@@ -226,6 +271,8 @@ public class sender{
 					next_arg = 6;
 				else if(arg.equals("-r"))
 					next_arg = 7;
+				else if(arg.equals("-m"))
+					mach_friendly = true;
 				else
 					errorExit("Incorrect Usage!");
 			}
@@ -252,6 +299,7 @@ public class sender{
 			}
 		}
 
-		SlottedAlohaSender s = new SlottedAlohaSender(num_users, def_cw, pkt_gen_rate, max_pkts, max_retry_attempts);
+		// Start simulator
+		SlottedAlohaSender s = new SlottedAlohaSender(num_users, def_cw, pkt_gen_rate, max_pkts, max_retry_attempts, mach_friendly);
 	}
 }
