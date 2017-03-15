@@ -189,10 +189,10 @@ class SlottedAlohaSender{
 						if(!mach_friendly){
 							System.out.println("\nQuitting after " + Integer.toString(num_pkts_xmitted) + " pkts\n");
 							System.out.println("N: " + Integer.toString(num_users) 
-								+ " \tW: " + Integer.toString(def_cw)
-								+ "\tP: " + Double.toString(pkt_gen_rate));
-							System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
-								+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
+								+ ", W: " + Integer.toString(def_cw)
+								+ ", P: " + Double.toString(pkt_gen_rate)
+								+ ", Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
+								+ ", Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
 						}
 						// Print machine-friendly
 						else{
@@ -211,10 +211,10 @@ class SlottedAlohaSender{
 		// Print human-readable
 		if(!mach_friendly){
 			System.out.println("N: " + Integer.toString(num_users) 
-				+ " \tW: " + Integer.toString(def_cw)
-				+ "\tP: " + Double.toString(pkt_gen_rate));
-			System.out.println("Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
-				+ "\t Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
+				+ ", W: " + Integer.toString(def_cw)
+				+ ", P: " + Double.toString(pkt_gen_rate)
+				+ ", Utilization: " + Double.toString( (num_pkts_xmitted*1.0)/SimTime )
+				+ ", Average Packet Delay: " + Double.toString( (total_delay_time*1.0)/num_pkts_xmitted ));				
 		}
 		// Print machine-friendly
 		else{
@@ -248,20 +248,14 @@ public class sender{
 
 		int max_retry_attempts = 10;
 
-		// DEBUG modes
-		boolean debug 	 	  = false;
-		boolean deep_debug 	  = false;
+		// machine friendly op modes
 		boolean mach_friendly = false;
 
 		// Process Command Line Args
 		int next_arg = 0;
 		for(String arg: args){
 			if(next_arg == 0){
-				if(arg.equals("-d"))
-					debug = true;
-				else if(arg.equals("-dd"))
-					deep_debug = true;
-				else if(arg.equals("-N"))
+				if(arg.equals("-N"))
 					next_arg = 3;
 				else if(arg.equals("-W"))
 					next_arg = 4;

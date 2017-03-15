@@ -21,4 +21,5 @@ Usage:
         -r <max_retry_attempts>     default value = 10
     
         -m <machine_friendly_mode>  default value = false
+
 4. Run the script using ```python script.py```
